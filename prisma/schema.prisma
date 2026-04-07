@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String    @default("USER")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts   Account[]
+  sessions   Session[]
+  proposals  Proposal[]
+  activities ProposalActivity[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  company     String?
+  country     String?
+  industry    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  proposals Proposal[]
+}
+
+model Proposal {
+  id          String   @id @default(cuid())
+  title       String
+  clientId    String
+  createdById String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client    Client          @relation(fields: [clientId], references: [id])
+  createdBy User            @relation(fields: [createdById], references: [id])
+  versions  ProposalVersion[]
+}
+
+model ProposalVersion {
+  id            String    @id @default(cuid())
+  proposalId    String
+  versionNumber Int
+  label         String?
+  status        String    @default("DRAFT")
+  pricingData   String
+  pdfUrl        String?
+  shareToken    String?   @unique
+  shareExpiry   DateTime?
+  viewedAt      DateTime?
+  viewCount     Int       @default(0)
+  sentAt        DateTime?
+  agreedAt      DateTime?
+  rejectedAt    DateTime?
+  rejectedNote  String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  proposal   Proposal          @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  activities ProposalActivity[]
+
+  @@unique([proposalId, versionNumber])
+}
+
+model ProposalActivity {
+  id        String   @id @default(cuid())
+  versionId String
+  userId    String?
+  action    String
+  metadata  String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  version ProposalVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  user    User?           @relation(fields: [userId], references: [id])
+}
+
+model PricingTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  country       String
+  paymentMethod String
+  currency      String
+  data          String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
